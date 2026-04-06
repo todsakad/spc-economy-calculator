@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Economy Calculator V3</title>
+    <title>Economy Calculator V4</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1e1e2e; color: #cdd6f4; padding: 20px; max-width: 1200px; margin: auto; }
         .panel { background: #313244; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
@@ -18,8 +18,9 @@
         select, input { background: #181825; color: #cdd6f4; border: 1px solid #45475a; padding: 6px; border-radius: 4px; margin-right: 10px; }
         input[type="text"] { width: 150px; }
         input[type="number"] { width: 70px; }
+        input[list] { width: 200px; } /* Searchable dropdown width */
 
-        .mod-row { display: flex; align-items: center; background: #181825; padding: 8px; border-radius: 4px; margin-bottom: 8px; gap: 10px; }
+        .mod-row { display: flex; align-items: center; background: #181825; padding: 8px; border-radius: 4px; margin-bottom: 8px; gap: 10px; flex-wrap: wrap; }
         
         .planet-card { background: #45475a; padding: 15px; border-radius: 6px; margin-bottom: 15px; border-left: 5px solid #89b4fa; }
         .planet-header { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
@@ -36,6 +37,8 @@
     </style>
 </head>
 <body>
+
+    <datalist id="modifier-options"></datalist>
 
     <div class="header-actions">
         <button onclick="saveData()">💾 Save Configuration</button>
@@ -60,22 +63,18 @@
     </div>
 
 <script>
+    // --- DICTIONARIES & DATA ---
     const RESOURCE_TYPES = {
-        basic: ['energy', 'minerals', 'food'],
-        advanced: ['alloys', 'tech', 'unity'],
-        trade: ['trade']
+        basic: ['energy', 'minerals', 'alloys', 'food'],
+        abstract: ['tech', 'unity'],
+        special: ['trade', 'influence', 'dark_matter', 'zro'],
+        strategic: ['rare_crystals', 'volatile_motes', 'exotic_gases']
     };
 
-    const MODIFIER_TYPES = {
-        'pct_basic': '% Basic Output (Energy/Min/Food)',
-        'pct_adv': '% Adv Output (Alloys/Tech/Unity)',
-        'pct_trade': '% Trade Value',
-        'pct_all': '% All Output',
-        'flat_energy': 'Flat Energy Add',
-        'flat_minerals': 'Flat Minerals Add'
-    };
+    // Flatten all resources for the "All" category
+    const ALL_RESOURCES = [].concat(...Object.values(RESOURCE_TYPES));
 
-    // Keep your massive dictionary here
+    // Keep your massive dictionary here!
     const PLANET_DATA = {
         "JOAT": {
             "T0": { prod: {}, upkeep: {} },
@@ -183,15 +182,35 @@
         planets: []
     };
 
+    // --- INITIALIZATION (Builds the Datalist Dynamically) ---
+    function initDatalist() {
+        const datalist = document.getElementById('modifier-options');
+        let options = [];
+
+        // Categories
+        const categories = ['All', 'Basic', 'Abstract', 'Special', 'Strategic'];
+        categories.forEach(cat => {
+            options.push(`% ${cat}`);
+            options.push(`Flat ${cat}`);
+        });
+
+        // Individual Resources
+        ALL_RESOURCES.forEach(res => {
+            // Format name: 'volatile_motes' -> 'Volatile Motes'
+            let prettyName = res.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+            options.push(`% ${prettyName}`);
+            options.push(`Flat ${prettyName}`);
+        });
+
+        datalist.innerHTML = options.map(opt => `<option value="${opt}"></option>`).join('');
+    }
+
     // --- STATE MANAGEMENT ---
     function saveData() {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
-        const downloadAnchorNode = document.createElement('a');
-        downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", "empire_economy.json");
-        document.body.appendChild(downloadAnchorNode);
-        downloadAnchorNode.click();
-        downloadAnchorNode.remove();
+        const anchor = document.createElement('a');
+        anchor.href = dataStr; anchor.download = "empire_economy.json";
+        document.body.appendChild(anchor); anchor.click(); anchor.remove();
     }
 
     function loadData(event) {
@@ -199,26 +218,22 @@
         if (!file) return;
         const reader = new FileReader();
         reader.onload = function(e) {
-            try {
-                appState = JSON.parse(e.target.result);
-                renderApp();
-            } catch (err) {
-                alert("Error loading file. Make sure it's a valid JSON configuration.");
-            }
+            try { appState = JSON.parse(e.target.result); renderApp(); } 
+            catch (err) { alert("Error loading valid JSON configuration."); }
         };
         reader.readAsText(file);
     }
 
     // --- MODIFIER LOGIC ---
     function addGlobalModifier() {
-        appState.globalModifiers.push({ id: Date.now(), name: "New Buff", type: "pct_basic", value: 0 });
+        appState.globalModifiers.push({ id: Date.now(), name: "New Buff", type: "% Basic", value: 0, scope: "planet", target: "all" });
         renderApp();
     }
 
     function updateGlobalModifier(id, field, value) {
         const mod = appState.globalModifiers.find(m => m.id === id);
         if (mod) mod[field] = value;
-        renderApp();
+        renderApp(); // Re-render to update UI (like showing/hiding target dropdown)
     }
 
     function removeGlobalModifier(id) {
@@ -229,7 +244,7 @@
     function addLocalModifier(planetId) {
         const p = appState.planets.find(p => p.id === planetId);
         if (p) {
-            p.modifiers.push({ id: Date.now(), name: "Local Buff", type: "pct_basic", value: 0 });
+            p.modifiers.push({ id: Date.now(), name: "Local Buff", type: "% Basic", value: 0 });
             renderApp();
         }
     }
@@ -256,7 +271,6 @@
         const id = Date.now();
         const firstType = Object.keys(PLANET_DATA)[0];
         const firstTier = Object.keys(PLANET_DATA[firstType])[0];
-        
         appState.planets.push({ id, name: "New Planet", type: firstType, tier: firstTier, hab: "80-100", asc: 0, modifiers: [] });
         renderApp();
     }
@@ -279,28 +293,45 @@
     }
 
     // --- RENDERING UI ---
-    function buildModifierSelect(currentValue) {
-        return Object.entries(MODIFIER_TYPES).map(([val, label]) => 
-            `<option value="${val}" ${currentValue === val ? 'selected' : ''}>${label}</option>`
-        ).join('');
+    function generateTargetOptions(selectedTarget) {
+        let opts = `<option value="all" ${selectedTarget === 'all' ? 'selected' : ''}>All Planets</option>`;
+        for(let i=1; i<=8; i++) {
+            opts += `<option value="tier_${i}" ${selectedTarget === `tier_${i}` ? 'selected' : ''}>Tier ${i}+</option>`;
+        }
+        Object.keys(PLANET_DATA).forEach(type => {
+            opts += `<option value="type_${type}" ${selectedTarget === `type_${type}` ? 'selected' : ''}>Type: ${type}</option>`;
+        });
+        return opts;
     }
 
     function renderApp() {
-        // 1. Render Global Mods
         const gContainer = document.getElementById('global-mods-container');
         gContainer.innerHTML = appState.globalModifiers.length === 0 ? '<span style="color:#a6adc8;">No global modifiers active.</span>' : '';
+        
         appState.globalModifiers.forEach(m => {
             gContainer.innerHTML += `
                 <div class="mod-row">
-                    <input type="text" value="${m.name}" onchange="updateGlobalModifier(${m.id}, 'name', this.value)">
-                    <select onchange="updateGlobalModifier(${m.id}, 'type', this.value)">${buildModifierSelect(m.type)}</select>
+                    <input type="text" value="${m.name}" onchange="updateGlobalModifier(${m.id}, 'name', this.value)" placeholder="Buff Name">
+                    
+                    <select onchange="updateGlobalModifier(${m.id}, 'scope', this.value)">
+                        <option value="planet" ${m.scope === 'planet' ? 'selected' : ''}>Per Planet</option>
+                        <option value="turn" ${m.scope === 'turn' ? 'selected' : ''}>Per Turn (Empire)</option>
+                    </select>
+
+                    ${m.scope === 'planet' ? `
+                    <select onchange="updateGlobalModifier(${m.id}, 'target', this.value)">
+                        ${generateTargetOptions(m.target)}
+                    </select>
+                    ` : ''}
+
+                    <input list="modifier-options" value="${m.type}" onchange="updateGlobalModifier(${m.id}, 'type', this.value)" placeholder="Search Buff (e.g. % Food)">
+                    
                     Value: <input type="number" value="${m.value}" onchange="updateGlobalModifier(${m.id}, 'value', parseFloat(this.value) || 0)">
                     <button class="danger" onclick="removeGlobalModifier(${m.id})">X</button>
                 </div>
             `;
         });
 
-        // 2. Render Planets
         const pContainer = document.getElementById('planet-container');
         pContainer.innerHTML = appState.planets.length === 0 ? '<span style="color:#a6adc8;">No planets colonized yet.</span>' : '';
         
@@ -310,8 +341,8 @@
 
             let localModsHtml = p.modifiers.map(m => `
                 <div class="mod-row">
-                    <input type="text" value="${m.name}" onchange="updateLocalModifier(${p.id}, ${m.id}, 'name', this.value)" style="width:120px;">
-                    <select onchange="updateLocalModifier(${p.id}, ${m.id}, 'type', this.value)">${buildModifierSelect(m.type)}</select>
+                    <input type="text" value="${m.name}" onchange="updateLocalModifier(${p.id}, ${m.id}, 'name', this.value)" placeholder="Name" style="width:120px;">
+                    <input list="modifier-options" value="${m.type}" onchange="updateLocalModifier(${p.id}, ${m.id}, 'type', this.value)" placeholder="Search Buff...">
                     Value: <input type="number" value="${m.value}" onchange="updateLocalModifier(${p.id}, ${m.id}, 'value', parseFloat(this.value) || 0)">
                     <button class="danger" onclick="removeLocalModifier(${p.id}, ${m.id})">X</button>
                 </div>
@@ -343,65 +374,114 @@
         });
     }
 
-    // --- CALCULATION ENGINE ---
+    // --- CALCULATION ENGINE (THE BRAIN) ---
+    
+    // Parses user input like "% Basic" or "Flat Alloys" into a usable logic array
+    function parseModifier(typeString, value) {
+        let str = typeString.toLowerCase().trim();
+        let isPct = str.startsWith('%');
+        let isFlat = str.startsWith('flat');
+        if (!isPct && !isFlat) return []; // Invalid formatting, ignore
+
+        // Extract the resource/category name (e.g. "volatile motes", "basic")
+        let resTarget = str.substring(isFlat ? 5 : 2).trim().replace(/ /g, '_');
+        
+        let targets = [];
+        if (resTarget === 'all') targets = ALL_RESOURCES;
+        else if (RESOURCE_TYPES[resTarget]) targets = RESOURCE_TYPES[resTarget];
+        else targets = [resTarget]; // It's an individual resource
+
+        return targets.map(t => ({ res: t, isPct, value }));
+    }
+
     function calculateEconomy() {
         let gross = {};
         let upkeep = {};
 
-        // Aggregate Global Buffs
-        let gBuffs = { pct_basic: 0, pct_adv: 0, pct_trade: 0, pct_all: 0, flat_energy: 0, flat_minerals: 0 };
-        appState.globalModifiers.forEach(m => { gBuffs[m.type] += m.value; });
+        let turnMods = []; // Global mods scoped to Empire Turn
+        let planetMods = []; // Global mods scoped to Planets
 
-        // Calculate Planets
+        appState.globalModifiers.forEach(m => {
+            if (m.scope === 'turn') turnMods.push(m);
+            if (m.scope === 'planet') planetMods.push(m);
+        });
+
+        // 1. Calculate Planet Production & Upkeep
         appState.planets.forEach(p => {
             const baseData = PLANET_DATA[p.type] && PLANET_DATA[p.type][p.tier];
             if (!baseData) return;
 
-            // Aggregate Local Buffs for this planet
-            let lBuffs = { pct_basic: 0, pct_adv: 0, pct_trade: 0, pct_all: 0, flat_energy: 0, flat_minerals: 0 };
-            p.modifiers.forEach(m => { lBuffs[m.type] += m.value; });
+            // Gather all valid buffs for this specific planet
+            let activeBuffs = { pct: {}, flat: {} };
 
+            function applyToAccumulator(modObj) {
+                let parsed = parseModifier(modObj.type, modObj.value);
+                parsed.forEach(mod => {
+                    if (mod.isPct) activeBuffs.pct[mod.res] = (activeBuffs.pct[mod.res] || 0) + mod.value;
+                    else activeBuffs.flat[mod.res] = (activeBuffs.flat[mod.res] || 0) + mod.value;
+                });
+            }
+
+            // A. Apply Local Buffs
+            p.modifiers.forEach(applyToAccumulator);
+
+            // B. Apply Valid Global Planet Buffs
+            planetMods.forEach(m => {
+                let matches = false;
+                if (m.target === 'all') {
+                    matches = true;
+                } else if (m.target.startsWith('type_')) {
+                    if (p.type === m.target.substring(5)) matches = true;
+                } else if (m.target.startsWith('tier_')) {
+                    let targetTier = parseInt(m.target.substring(5));
+                    let pTierStr = p.tier.match(/\d+/); // Extracts the '7' from 'T7_Ecumenopolis'
+                    let pTierNum = pTierStr ? parseInt(pTierStr[0]) : 0;
+                    if (pTierNum >= targetTier) matches = true;
+                }
+                
+                if (matches) applyToAccumulator(m);
+            });
+
+            // Math Constants
             let habPenalty = 0;
             if (p.hab === "0-49") habPenalty = 0.70;
             if (p.hab === "50-79") habPenalty = 0.30;
             const ascBonus = p.asc * 0.05;
 
-            // Apply Base Production + Modifiers
+            // Process Production: (Base + Flat) * (1 - Hab + Asc + Pct/100)
             if (baseData.prod) {
                 for (const [res, amount] of Object.entries(baseData.prod)) {
-                    let isBasic = RESOURCE_TYPES.basic.includes(res);
-                    let isAdv = RESOURCE_TYPES.advanced.includes(res);
-                    let isTrade = RESOURCE_TYPES.trade.includes(res);
+                    let basePlusFlat = amount + (activeBuffs.flat[res] || 0);
+                    let pctMultiplier = 1 - habPenalty + ascBonus + ((activeBuffs.pct[res] || 0) / 100);
+                    if (pctMultiplier < 0) pctMultiplier = 0;
 
-                    let pctBonus = gBuffs.pct_all + lBuffs.pct_all;
-                    if (isBasic) pctBonus += (gBuffs.pct_basic + lBuffs.pct_basic);
-                    if (isAdv) pctBonus += (gBuffs.pct_adv + lBuffs.pct_adv);
-                    if (isTrade) pctBonus += (gBuffs.pct_trade + lBuffs.pct_trade);
-
-                    let multiplier = 1 - habPenalty + ascBonus + (pctBonus / 100);
-                    if (multiplier < 0) multiplier = 0;
-
-                    gross[res] = (gross[res] || 0) + (amount * multiplier);
+                    gross[res] = (gross[res] || 0) + (basePlusFlat * pctMultiplier);
                 }
             }
 
-            // Apply Upkeep (Untouched by standard production modifiers)
+            // Process Upkeep (Upkeep is generally unaffected by prod modifiers in this engine context)
             if (baseData.upkeep) {
                 for (const [res, amount] of Object.entries(baseData.upkeep)) {
                     upkeep[res] = (upkeep[res] || 0) + amount;
                 }
             }
-
-            // Apply Local Flat Buffs
-            if (lBuffs.flat_energy > 0) gross['energy'] = (gross['energy'] || 0) + lBuffs.flat_energy;
-            if (lBuffs.flat_minerals > 0) gross['minerals'] = (gross['minerals'] || 0) + lBuffs.flat_minerals;
         });
 
-        // Apply Global Flat Buffs
-        if (gBuffs.flat_energy > 0) gross['energy'] = (gross['energy'] || 0) + gBuffs.flat_energy;
-        if (gBuffs.flat_minerals > 0) gross['minerals'] = (gross['minerals'] || 0) + gBuffs.flat_minerals;
+        // 2. Apply "Per Turn" Empire Flat Buffs
+        turnMods.forEach(m => {
+            let parsed = parseModifier(m.type, m.value);
+            parsed.forEach(mod => {
+                if (mod.isPct) {
+                    // If it's an Empire % buff, multiply the final gross
+                    gross[mod.res] = (gross[mod.res] || 0) * (1 + (mod.value / 100));
+                } else {
+                    // Flat Empire addition
+                    gross[mod.res] = (gross[mod.res] || 0) + mod.value;
+                }
+            });
+        });
 
-        // Render Ledger Table
+        // 3. Render Output Ledger
         const allResources = new Set([...Object.keys(gross), ...Object.keys(upkeep)]);
         let sortedResources = Array.from(allResources).sort();
 
@@ -425,7 +505,8 @@
             let uVal = upkeep[res] || 0;
             let netVal = pVal - uVal;
 
-            let formattedName = res.replace('_', ' ').toUpperCase();
+            // Formatting
+            let formattedName = res.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
             let netClass = netVal > 0 ? 'positive' : (netVal < 0 ? 'negative' : 'neutral');
             let netSign = netVal > 0 ? '+' : '';
 
@@ -443,7 +524,8 @@
         document.getElementById('output-display').innerHTML = tableHtml;
     }
 
-    // Initialize the app empty
+    // Init App
+    initDatalist();
     renderApp();
 </script>
 </body>
