@@ -3,42 +3,323 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stellar Economy Calculator</title>
+    <title>Economy Calculator</title>
     <style>
-        body { font-family: system-ui, sans-serif; padding: 20px; background: #121212; color: #e0e0e0; }
-        .panel { background: #1e1e1e; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-        input, select { margin: 5px; padding: 5px; background: #333; color: white; border: 1px solid #555; }
-        button { padding: 8px 15px; background: #0066cc; color: white; border: none; cursor: pointer; border-radius: 4px; }
-        button:hover { background: #005bb5; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1e1e2e; color: #cdd6f4; padding: 20px; }
+        .panel { background: #313244; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        h2 { margin-top: 0; color: #89b4fa; border-bottom: 1px solid #45475a; padding-bottom: 10px; }
+        button { background: #89b4fa; color: #11111b; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #b4befe; }
+        select, input { background: #181825; color: #cdd6f4; border: 1px solid #45475a; padding: 6px; border-radius: 4px; margin-right: 10px; }
+        .buff-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+        .buff-item { display: flex; flex-direction: column; }
+        .buff-item label { font-size: 0.9em; margin-bottom: 5px; color: #a6adc8; }
+        #output-display { font-family: monospace; white-space: pre-wrap; font-size: 1.1em; color: #a6e3a1; }
     </style>
 </head>
 <body>
 
-    <h1>Empire Economy Calculator</h1>
-    
     <div class="panel">
-        <h3>1. Planet Roster</h3>
-        <div id="planet-container"></div>
-        <button onclick="addPlanet()">+ Add Planet</button>
-    </div>
-
-    <div class="panel">
-        <h3>2. Global Buffs</h3>
-        <div class="grid">
-            <label>Flat Basic Res/Planet: <input type="number" id="buff-flat-basic-planet" value="0"></label>
-            <label>Flat Energy/Turn: <input type="number" id="buff-flat-energy-turn" value="0"></label>
-            <label>% Basic Res/Planet: <input type="number" id="buff-pct-basic-planet" value="0"></label>
-            <label>% Basic Res/Turn: <input type="number" id="buff-pct-basic-turn" value="0"></label>
+        <h2>Global Empire Modifiers</h2>
+        <div class="buff-grid">
+            <div class="buff-item">
+                <label>Flat Empire Energy (Base Turn Add):</label>
+                <input type="number" id="buff-flat-energy" value="0">
+            </div>
+            <div class="buff-item">
+                <label>Flat Empire Minerals (Base Turn Add):</label>
+                <input type="number" id="buff-flat-minerals" value="0">
+            </div>
+            <div class="buff-item">
+                <label>% Bonus to Basic (Energy/Min/Food):</label>
+                <input type="number" id="buff-pct-basic" value="0" placeholder="e.g. 10 for +10%">
+            </div>
+            <div class="buff-item">
+                <label>% Bonus to Advanced (Alloys/Tech/Unity):</label>
+                <input type="number" id="buff-pct-adv" value="0" placeholder="e.g. 15 for +15%">
+            </div>
+            <div class="buff-item">
+                <label>% Bonus to Trade Value:</label>
+                <input type="number" id="buff-pct-trade" value="0" placeholder="e.g. 5 for +5%">
+            </div>
         </div>
     </div>
 
     <div class="panel">
-        <h3>3. Turn Production Output</h3>
-        <button onclick="calculateEconomy()">Calculate Turn Output</button>
-        <div id="output-display" style="margin-top: 15px; font-weight: bold; white-space: pre-wrap;"></div>
+        <h2>Planets</h2>
+        <button onclick="addPlanet()" style="margin-bottom: 15px;">+ Add Planet</button>
+        <div id="planet-container"></div>
     </div>
 
-    <script src="app.js"></script>
+    <div class="panel">
+        <button onclick="calculateEconomy()" style="background: #a6e3a1; width: 100%; font-size: 1.2em; padding: 15px;">Calculate Total Turn Output</button>
+        <h2 style="margin-top: 20px;">Results:</h2>
+        <div id="output-display">Add a planet and hit calculate!</div>
+    </div>
+
+<script>
+    const RESOURCE_TYPES = {
+        basic: ['energy', 'minerals', 'food'],
+        advanced: ['alloys', 'tech', 'unity'],
+        trade: ['trade']
+    };
+
+    const PLANET_DATA = {
+        "JOAT": {
+            "T0": { prod: {}, upkeep: {} },
+            "T1": { prod: {energy: 5, minerals: 5, alloys: 5, food: 5, tech: 10, unity: 10, trade: 10}, upkeep: {food: 5, trade: 5} },
+            "T2": { prod: {energy: 10, minerals: 15, alloys: 10, food: 10, tech: 20, unity: 20, trade: 20}, upkeep: {food: 10, trade: 10} },
+            "T3": { prod: {energy: 15, minerals: 30, alloys: 15, food: 20, tech: 30, unity: 30, trade: 30}, upkeep: {food: 40, trade: 40} },
+            "T4": { prod: {energy: 25, minerals: 45, alloys: 25, food: 40, tech: 40, unity: 40, trade: 40}, upkeep: {food: 60, trade: 60} },
+            "T5": { prod: {energy: 35, minerals: 60, alloys: 35, food: 60, tech: 50, unity: 50, trade: 50}, upkeep: {food: 80, trade: 80} },
+            "T6": { prod: {energy: 50, minerals: 50, alloys: 50, food: 80, tech: 70, trade: 70}, upkeep: {food: 80, trade: 80} },
+            "T7_Ecumenopolis": { prod: {energy: 70, minerals: 40, alloys: 90, food: 80, tech: 80, unity: 50, trade: 80}, upkeep: {food: 80, trade: 80} },
+            "T7_Machine": { prod: {energy: 70, minerals: 70, alloys: 70, food: 70, tech: 70, unity: 70, trade: 20}, upkeep: {energy: 50, trade: 50} },
+            "T7_Hive": { prod: {energy: 60, minerals: 60, alloys: 50, food: 100, tech: 70, unity: 70, trade: 20}, upkeep: {food: 90, trade: 90} },
+            "T8_Ring": { prod: {energy: 100, alloys: 62.5, tech: 75, food: 50, trade: 75}, upkeep: {food: 125, trade: 125} }
+        },
+        "Generator World (Organic)": {
+            "T1": { prod: {energy: 25}, upkeep: {food: 5} }, "T2": { prod: {energy: 40}, upkeep: {food: 10} }, "T3": { prod: {energy: 80}, upkeep: {food: 20} },
+            "T4": { prod: {energy: 100}, upkeep: {food: 30} }, "T5": { prod: {energy: 160}, upkeep: {food: 40} }, "T6": { prod: {energy: 200}, upkeep: {food: 50} },
+            "T7_Machine": { prod: {energy: 250}, upkeep: {energy: 45} }, "T7_Hive": { prod: {energy: 210}, upkeep: {food: 50} }, "T7_Ecumenopolis": { prod: {energy: 220}, upkeep: {food: 50} },
+            "T8": { prod: {energy: 200}, upkeep: {food: 80} }
+        },
+        "Generator World (Machine)": {
+            "T1": { prod: {energy: 25}, upkeep: {energy: 3} }, "T2": { prod: {energy: 40}, upkeep: {energy: 5} }, "T3": { prod: {energy: 80}, upkeep: {energy: 10} },
+            "T4": { prod: {energy: 100}, upkeep: {energy: 15} }, "T5": { prod: {energy: 160}, upkeep: {energy: 20} }, "T6": { prod: {energy: 200}, upkeep: {energy: 20} },
+            "T7_Machine": { prod: {energy: 250}, upkeep: {food: 45} }, "T7_Hive": { prod: {energy: 210}, upkeep: {food: 50} }, "T7_Ecumenopolis": { prod: {energy: 220}, upkeep: {food: 50} },
+            "T8": { prod: {energy: 200}, upkeep: {energy: 80} }
+        },
+        "Mining World (Organic)": {
+            "T1": { prod: {minerals: 25}, upkeep: {food: 5} }, "T2": { prod: {minerals: 40}, upkeep: {food: 10} }, "T3": { prod: {minerals: 80}, upkeep: {food: 20} },
+            "T4": { prod: {minerals: 100}, upkeep: {food: 30} }, "T5": { prod: {minerals: 160}, upkeep: {food: 40} }, "T6": { prod: {minerals: 200}, upkeep: {food: 50} },
+            "T7_Machine": { prod: {minerals: 250}, upkeep: {energy: 45} }, "T7_Hive": { prod: {minerals: 210}, upkeep: {food: 50} }, "T7_Ecumenopolis": { prod: {minerals: 220}, upkeep: {food: 50} }
+        },
+        "Mining World (Machine)": {
+            "T1": { prod: {minerals: 25}, upkeep: {energy: 5} }, "T2": { prod: {minerals: 40}, upkeep: {energy: 10} }, "T3": { prod: {minerals: 80}, upkeep: {energy: 20} },
+            "T4": { prod: {minerals: 100}, upkeep: {energy: 30} }, "T5": { prod: {minerals: 160}, upkeep: {energy: 40} }, "T6": { prod: {minerals: 200}, upkeep: {energy: 50} },
+            "T7_Machine": { prod: {minerals: 250}, upkeep: {energy: 45} }, "T7_Hive": { prod: {minerals: 210}, upkeep: {food: 50} }, "T7_Ecumenopolis": { prod: {minerals: 220}, upkeep: {food: 50} }
+        },
+        "Agri-World (Organic)": {
+            "T1": { prod: {food: 25}, upkeep: {food: 5} }, "T2": { prod: {food: 40}, upkeep: {food: 10} }, "T3": { prod: {food: 80}, upkeep: {food: 20} },
+            "T4": { prod: {food: 100}, upkeep: {food: 30} }, "T5": { prod: {food: 160}, upkeep: {food: 40} }, "T6": { prod: {food: 200}, upkeep: {food: 50} },
+            "T7_Machine": { prod: {food: 210}, upkeep: {energy: 50} }, "T7_Hive": { prod: {food: 250}, upkeep: {food: 50} }, "T7_Ecumenopolis": { prod: {food: 220}, upkeep: {food: 50} }
+        },
+        "Agri-World (Machine)": {
+            "T1": { prod: {food: 25}, upkeep: {energy: 5} }, "T2": { prod: {food: 40}, upkeep: {energy: 10} }, "T3": { prod: {food: 80}, upkeep: {energy: 15} },
+            "T4": { prod: {food: 100}, upkeep: {energy: 25} }, "T5": { prod: {food: 160}, upkeep: {energy: 30} }, "T6": { prod: {food: 200}, upkeep: {energy: 45} },
+            "T7_Machine": { prod: {food: 210}, upkeep: {energy: 50} }, "T7_Hive": { prod: {food: 250}, upkeep: {food: 50} }, "T7_Ecumenopolis": { prod: {food: 220}, upkeep: {food: 50} }
+        },
+        "Tech-World (Organic)": {
+            "T1": { prod: {tech: 30}, upkeep: {food: 5} }, "T2": { prod: {tech: 50}, upkeep: {food: 10} }, "T3": { prod: {tech: 80}, upkeep: {food: 15} },
+            "T4": { prod: {tech: 110}, upkeep: {food: 20} }, "T5": { prod: {tech: 150}, upkeep: {food: 30} }, "T6": { prod: {tech: 220}, upkeep: {food: 40} },
+            "T7_Machine": { prod: {tech: 300}, upkeep: {energy: 45} }, "T7_Hive": { prod: {tech: 300}, upkeep: {food: 45} }, "T7_Ecumenopolis": { prod: {tech: 350}, upkeep: {food: 55} },
+            "T8": { prod: {tech: 212.5}, upkeep: {food: 75} }
+        },
+        "Tech-World (Machine)": {
+            "T1": { prod: {tech: 30}, upkeep: {energy: 5} }, "T2": { prod: {tech: 50}, upkeep: {energy: 10} }, "T3": { prod: {tech: 80}, upkeep: {energy: 15} },
+            "T4": { prod: {tech: 110}, upkeep: {energy: 20} }, "T5": { prod: {tech: 150}, upkeep: {energy: 30} }, "T6": { prod: {tech: 220}, upkeep: {energy: 40} },
+            "T7_Machine": { prod: {tech: 300}, upkeep: {energy: 45} }, "T7_Hive": { prod: {tech: 300}, upkeep: {food: 45} }, "T7_Ecumenopolis": { prod: {tech: 350}, upkeep: {energy: 55} }, 
+            "T8": { prod: {tech: 212.5}, upkeep: {energy: 75} }
+        },
+        "Forge World": {
+            "T1": { prod: {alloys: 15}, upkeep: {minerals: 10} }, "T2": { prod: {alloys: 25}, upkeep: {minerals: 15} }, "T3": { prod: {alloys: 40}, upkeep: {minerals: 20} },
+            "T4": { prod: {alloys: 45}, upkeep: {minerals: 25} }, "T5": { prod: {alloys: 70}, upkeep: {minerals: 40} }, "T6": { prod: {alloys: 80}, upkeep: {minerals: 50} },
+            "T7_Machine": { prod: {alloys: 105}, upkeep: {minerals: 55} }, "T7_Hive": { prod: {alloys: 100}, upkeep: {minerals: 60} }, "T7_Ecumenopolis": { prod: {alloys: 105}, upkeep: {minerals: 55} },
+            "T8": { prod: {alloys: 225}, upkeep: {minerals: 80} }
+        },
+        "Unification Center (Organic)": {
+            "T1": { prod: {unity: 30}, upkeep: {food: 5} }, "T2": { prod: {unity: 50}, upkeep: {food: 10} }, "T3": { prod: {unity: 80}, upkeep: {food: 15} },
+            "T4": { prod: {unity: 110}, upkeep: {food: 20} }, "T5": { prod: {unity: 150}, upkeep: {food: 30} }, "T6": { prod: {unity: 220}, upkeep: {food: 40} },
+            "T7_Machine": { prod: {unity: 300}, upkeep: {energy: 45} }, "T7_Hive": { prod: {unity: 300}, upkeep: {food: 45} }, "T7_Ecumenopolis": { prod: {unity: 350}, upkeep: {food: 55} },
+            "T8": { prod: {unity: 850}, upkeep: {food: 300} }
+        },
+        "Unification Center (Machine)": {
+            "T1": { prod: {unity: 30}, upkeep: {energy: 5} }, "T2": { prod: {unity: 50}, upkeep: {energy: 10} }, "T3": { prod: {unity: 80}, upkeep: {energy: 15} },
+            "T4": { prod: {unity: 110}, upkeep: {energy: 20} }, "T5": { prod: {unity: 150}, upkeep: {energy: 30} }, "T6": { prod: {unity: 220}, upkeep: {energy: 40} },
+            "T7_Machine": { prod: {unity: 300}, upkeep: {energy: 45} }, "T7_Hive": { prod: {unity: 300}, upkeep: {food: 45} }, "T7_Ecumenopolis": { prod: {unity: 350}, upkeep: {energy: 55} },
+            "T8": { prod: {unity: 850}, upkeep: {energy: 300} }
+        },
+        "Refinery World": {
+            "T1": { prod: {volatile_motes: 5, exotic_gases: 5, rare_crystals: 5}, upkeep: {energy: 10, minerals: 10, food: 10} },
+            "T2": { prod: {volatile_motes: 10, exotic_gases: 10, rare_crystals: 10}, upkeep: {energy: 18, minerals: 18, food: 18} },
+            "T3": { prod: {volatile_motes: 20, exotic_gases: 20, rare_crystals: 20}, upkeep: {energy: 34, minerals: 34, food: 34} },
+            "T4": { prod: {volatile_motes: 30, exotic_gases: 30, rare_crystals: 30}, upkeep: {energy: 48, minerals: 48, food: 48} },
+            "T5": { prod: {volatile_motes: 50, exotic_gases: 50, rare_crystals: 50}, upkeep: {energy: 75, minerals: 75, food: 75} },
+            "T6": { prod: {volatile_motes: 65, exotic_gases: 65, rare_crystals: 65}, upkeep: {energy: 90, minerals: 90, food: 90} },
+            "T7_Machine": { prod: {volatile_motes: 70, exotic_gases: 70, rare_crystals: 70}, upkeep: {energy: 100, minerals: 100, food: 100} },
+            "T7_Hive": { prod: {volatile_motes: 70, exotic_gases: 70, rare_crystals: 70}, upkeep: {energy: 100, minerals: 100, food: 100} },
+            "T7_Ecumenopolis": { prod: {volatile_motes: 70, exotic_gases: 70, rare_crystals: 70}, upkeep: {energy: 100, minerals: 100, food: 100} },
+            "T8_Ring": { prod: {volatile_motes: 50, exotic_gases: 50, rare_crystals: 50}, upkeep: {energy: 60, minerals: 60, food: 60} }
+        },
+        "Trade World (Organic)": {
+            "T1": { prod: {trade: 30}, upkeep: {food: 5} }, "T2": { prod: {trade: 50}, upkeep: {food: 10} }, "T3": { prod: {trade: 80}, upkeep: {food: 15} },
+            "T4": { prod: {trade: 110}, upkeep: {food: 20} }, "T5": { prod: {trade: 150}, upkeep: {food: 30} }, "T6": { prod: {trade: 220}, upkeep: {food: 40} },
+            "T7_Machine": { prod: {trade: 30}, upkeep: {energy: 50} }, "T7_Hive": { prod: {trade: 270}, upkeep: {food: 50} }, "T7_Ecumenopolis": { prod: {trade: 350}, upkeep: {food: 55} },
+            "T8": { prod: {trade: 212.5}, upkeep: {food: 75} }
+        },
+        "Trade World (Machine)": {
+            "T1": { prod: {trade: 30}, upkeep: {energy: 5} }, "T2": { prod: {trade: 50}, upkeep: {energy: 10} }, "T3": { prod: {trade: 80}, upkeep: {energy: 15} },
+            "T4": { prod: {trade: 110}, upkeep: {energy: 20} }, "T5": { prod: {trade: 150}, upkeep: {energy: 30} }, "T6": { prod: {trade: 220}, upkeep: {energy: 40} },
+            "T7_Machine": { prod: {trade: 30}, upkeep: {energy: 50} }, "T7_Hive": { prod: {trade: 270}, upkeep: {food: 50} }, "T7_Ecumenopolis": { prod: {trade: 350}, upkeep: {energy: 55} },
+            "T8": { prod: {trade: 212.5}, upkeep: {energy: 75} }
+        }
+    };
+
+    let planets = [];
+
+    // --- UI LOGIC ---
+    function addPlanet() {
+        const id = Date.now();
+        const firstType = Object.keys(PLANET_DATA)[0];
+        const firstTier = Object.keys(PLANET_DATA[firstType])[0];
+        
+        planets.push({ id, type: firstType, tier: firstTier, hab: "80-100", asc: 0 });
+        renderPlanets();
+    }
+
+    function updatePlanet(id, field, value) {
+        const planet = planets.find(p => p.id === id);
+        if (planet) {
+            planet[field] = value;
+            if (field === 'type') {
+                const validTiers = Object.keys(PLANET_DATA[value]);
+                if (!validTiers.includes(planet.tier)) {
+                    planet.tier = validTiers[0]; 
+                }
+            }
+            renderPlanets();
+        }
+    }
+
+    function removePlanet(id) {
+        planets = planets.filter(p => p.id !== id);
+        renderPlanets();
+    }
+
+    function renderPlanets() {
+        const container = document.getElementById('planet-container');
+        container.innerHTML = '';
+        
+        planets.forEach(p => {
+            const div = document.createElement('div');
+            div.style.marginBottom = '15px';
+            div.style.padding = '10px';
+            div.style.background = '#181825';
+            div.style.borderRadius = '5px';
+            div.style.display = 'flex';
+            div.style.alignItems = 'center';
+            div.style.flexWrap = 'wrap';
+            div.style.gap = '10px';
+            
+            let typeOptions = Object.keys(PLANET_DATA).map(type => 
+                `<option value="${type}" ${p.type === type ? "selected" : ""}>${type}</option>`
+            ).join('');
+            
+            let tierOptions = Object.keys(PLANET_DATA[p.type]).map(tier => 
+                `<option value="${tier}" ${p.tier === tier ? "selected" : ""}>${tier}</option>`
+            ).join('');
+
+            div.innerHTML = `
+                <select onchange="updatePlanet(${p.id}, 'type', this.value)">
+                    ${typeOptions}
+                </select>
+                <select onchange="updatePlanet(${p.id}, 'tier', this.value)">
+                    ${tierOptions}
+                </select>
+                <select onchange="updatePlanet(${p.id}, 'hab', this.value)">
+                    <option value="80-100" ${p.hab==="80-100"?"selected":""}>80-100% Hab</option>
+                    <option value="50-79" ${p.hab==="50-79"?"selected":""}>50-79% Hab</option>
+                    <option value="0-49" ${p.hab==="0-49"?"selected":""}>0-49% Hab</option>
+                </select>
+                <label style="font-size: 0.9em; margin-left: auto;">Ascension:</label>
+                <input type="number" min="0" max="10" value="${p.asc}" onchange="updatePlanet(${p.id}, 'asc', parseFloat(this.value) || 0)" style="width: 50px; margin-right: 0;">
+                <button onclick="removePlanet(${p.id})" style="background: #f38ba8; color: #11111b; margin-left: 10px;">X</button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // --- CALCULATION ENGINE ---
+    function calculateEconomy() {
+        const buffs = {
+            flatEnergy: parseFloat(document.getElementById('buff-flat-energy').value) || 0,
+            flatMinerals: parseFloat(document.getElementById('buff-flat-minerals').value) || 0,
+            pctBasic: (parseFloat(document.getElementById('buff-pct-basic').value) || 0) / 100,
+            pctAdv: (parseFloat(document.getElementById('buff-pct-adv').value) || 0) / 100,
+            pctTrade: (parseFloat(document.getElementById('buff-pct-trade').value) || 0) / 100
+        };
+
+        let totalOutput = {};
+
+        // Calculate Planet Production & Upkeep
+        planets.forEach(p => {
+            const baseData = PLANET_DATA[p.type] && PLANET_DATA[p.type][p.tier];
+            if (!baseData) return;
+
+            let habPenalty = 0;
+            if (p.hab === "0-49") { habPenalty = 0.70; }
+            if (p.hab === "50-79") { habPenalty = 0.30; }
+            
+            const ascBonus = p.asc * 0.05;
+
+            // Process Production
+            if (baseData.prod) {
+                for (const [res, amount] of Object.entries(baseData.prod)) {
+                    let isBasic = RESOURCE_TYPES.basic.includes(res);
+                    let isAdv = RESOURCE_TYPES.advanced.includes(res);
+                    let isTrade = RESOURCE_TYPES.trade.includes(res);
+
+                    let pctBonus = 0;
+                    if (isBasic) pctBonus = buffs.pctBasic;
+                    if (isAdv) pctBonus = buffs.pctAdv;
+                    if (isTrade) pctBonus = buffs.pctTrade;
+
+                    // Multiplier = Base (1.0) - Habitability Penalty + Ascension Bonus + Buffs
+                    // Note: Habitability penalty doesn't usually apply to Trade in normal Stellaris rules, 
+                    // but I'm keeping the math uniform here unless you want it excluded.
+                    let multiplier = 1 - habPenalty + ascBonus + pctBonus;
+                    if (multiplier < 0) multiplier = 0; // Prevent negative production loops
+
+                    totalOutput[res] = (totalOutput[res] || 0) + (amount * multiplier);
+                }
+            }
+
+            // Process Upkeep (Usually unaffected by production buffs)
+            if (baseData.upkeep) {
+                for (const [res, amount] of Object.entries(baseData.upkeep)) {
+                    totalOutput[res] = (totalOutput[res] || 0) - amount;
+                }
+            }
+        });
+
+        // Apply Empire Flat Buffs (e.g. Dyson spheres, base stations)
+        if (totalOutput['energy'] !== undefined || buffs.flatEnergy > 0) {
+            totalOutput['energy'] = (totalOutput['energy'] || 0) + buffs.flatEnergy;
+        }
+        if (totalOutput['minerals'] !== undefined || buffs.flatMinerals > 0) {
+            totalOutput['minerals'] = (totalOutput['minerals'] || 0) + buffs.flatMinerals;
+        }
+
+        // Render Output
+        let outputString = "";
+        const sortedResources = Object.keys(totalOutput).sort();
+        
+        if (sortedResources.length === 0) {
+            outputString = "No planets added yet.";
+        } else {
+            sortedResources.forEach(res => {
+                let formattedName = res.replace('_', ' ').toUpperCase();
+                let val = totalOutput[res];
+                // Color formatting for positives and negatives
+                let color = val >= 0 ? '#a6e3a1' : '#f38ba8'; 
+                let sign = val >= 0 ? '+' : '';
+                outputString += `<span style="color: ${color}">${formattedName}: ${sign}${val.toFixed(2)}</span>\n`;
+            });
+        }
+        
+        document.getElementById('output-display').innerHTML = outputString;
+    }
+</script>
 </body>
 </html>
