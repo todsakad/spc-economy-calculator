@@ -1,5 +1,4 @@
 // --- DATA DICTIONARY ---
-// Group resources by type to easily apply "Basic" or "Abstract" buffs
 const RESOURCE_TYPES = {
     basic: ['energy', 'minerals', 'alloys', 'food'],
     abstract: ['tech', 'unity'],
@@ -7,8 +6,7 @@ const RESOURCE_TYPES = {
     strategic: ['rare_crystals', 'volatile_motes', 'exotic_gases']
 };
 
-// You will populate the rest of your Tiers here
-const PLANET_DATA = {
+// Insert your massive PLANET_DATA dictionary here
 const PLANET_DATA = {
     "JOAT": {
         "T0": { prod: {}, upkeep: {} },
@@ -23,7 +21,6 @@ const PLANET_DATA = {
         "T7_Hive": { prod: {energy: 60, minerals: 60, alloys: 50, food: 100, tech: 70, unity: 70, trade: 20}, upkeep: {food: 90, trade: 90} },
         "T8_Ring": { prod: {energy: 100, alloys: 62.5, tech: 75, food: 50, trade: 75}, upkeep: {food: 125, trade: 125} }
     },
-    
     "Generator World (Organic)": {
         "T1": { prod: {energy: 25}, upkeep: {food: 5} },
         "T2": { prod: {energy: 40}, upkeep: {food: 10} },
@@ -36,7 +33,6 @@ const PLANET_DATA = {
         "T7_Ecumenopolis": { prod: {energy: 220}, upkeep: {food: 50} },
         "T8": { prod: {energy: 200}, upkeep: {food: 80} }
     },
-
     "Generator World (Machine)": {
         "T1": { prod: {energy: 25}, upkeep: {energy: 3} },
         "T2": { prod: {energy: 40}, upkeep: {energy: 5} },
@@ -44,12 +40,11 @@ const PLANET_DATA = {
         "T4": { prod: {energy: 100}, upkeep: {energy: 15} },
         "T5": { prod: {energy: 160}, upkeep: {energy: 20} },
         "T6": { prod: {energy: 200}, upkeep: {energy: 20} },
-        "T7_Machine": { prod: {energy: 250}, upkeep: {food: 45} }, // Note: Transcribed exactly as provided (food upkeep for machine world here)
+        "T7_Machine": { prod: {energy: 250}, upkeep: {food: 45} }, 
         "T7_Hive": { prod: {energy: 210}, upkeep: {food: 50} },
         "T7_Ecumenopolis": { prod: {energy: 220}, upkeep: {food: 50} },
         "T8": { prod: {energy: 200}, upkeep: {energy: 80} }
     },
-
     "Mining World (Organic)": {
         "T1": { prod: {minerals: 25}, upkeep: {food: 5} },
         "T2": { prod: {minerals: 40}, upkeep: {food: 10} },
@@ -61,7 +56,6 @@ const PLANET_DATA = {
         "T7_Hive": { prod: {minerals: 210}, upkeep: {food: 50} },
         "T7_Ecumenopolis": { prod: {minerals: 220}, upkeep: {food: 50} }
     },
-
     "Mining World (Machine)": {
         "T1": { prod: {minerals: 25}, upkeep: {energy: 5} },
         "T2": { prod: {minerals: 40}, upkeep: {energy: 10} },
@@ -73,7 +67,6 @@ const PLANET_DATA = {
         "T7_Hive": { prod: {minerals: 210}, upkeep: {food: 50} },
         "T7_Ecumenopolis": { prod: {minerals: 220}, upkeep: {food: 50} }
     },
-
     "Agri-World (Organic)": {
         "T1": { prod: {food: 25}, upkeep: {food: 5} },
         "T2": { prod: {food: 40}, upkeep: {food: 10} },
@@ -85,7 +78,6 @@ const PLANET_DATA = {
         "T7_Hive": { prod: {food: 250}, upkeep: {food: 50} },
         "T7_Ecumenopolis": { prod: {food: 220}, upkeep: {food: 50} }
     },
-
     "Agri-World (Machine)": {
         "T1": { prod: {food: 25}, upkeep: {energy: 5} },
         "T2": { prod: {food: 40}, upkeep: {energy: 10} },
@@ -97,7 +89,6 @@ const PLANET_DATA = {
         "T7_Hive": { prod: {food: 250}, upkeep: {food: 50} },
         "T7_Ecumenopolis": { prod: {food: 220}, upkeep: {food: 50} }
     },
-
     "Tech-World (Organic)": {
         "T1": { prod: {tech: 30}, upkeep: {food: 5} },
         "T2": { prod: {tech: 50}, upkeep: {food: 10} },
@@ -105,12 +96,11 @@ const PLANET_DATA = {
         "T4": { prod: {tech: 110}, upkeep: {food: 20} },
         "T5": { prod: {tech: 150}, upkeep: {food: 30} },
         "T6": { prod: {tech: 220}, upkeep: {food: 40} },
-        "T7_Machine": { prod: {tech: 300}, upkeep: {energy: 45} }, // Assuming energy for robot tech upkeep on T7
+        "T7_Machine": { prod: {tech: 300}, upkeep: {energy: 45} }, 
         "T7_Hive": { prod: {tech: 300}, upkeep: {food: 45} },
         "T7_Ecumenopolis": { prod: {tech: 350}, upkeep: {food: 55} },
         "T8": { prod: {tech: 212.5}, upkeep: {food: 75} }
     },
-    
     "Tech-World (Machine)": {
         "T1": { prod: {tech: 30}, upkeep: {energy: 5} },
         "T2": { prod: {tech: 50}, upkeep: {energy: 10} },
@@ -120,10 +110,9 @@ const PLANET_DATA = {
         "T6": { prod: {tech: 220}, upkeep: {energy: 40} },
         "T7_Machine": { prod: {tech: 300}, upkeep: {energy: 45} },
         "T7_Hive": { prod: {tech: 300}, upkeep: {food: 45} },
-        "T7_Ecumenopolis": { prod: {tech: 350}, upkeep: {energy: 55} }, // Assuming energy variant
+        "T7_Ecumenopolis": { prod: {tech: 350}, upkeep: {energy: 55} }, 
         "T8": { prod: {tech: 212.5}, upkeep: {energy: 75} }
     },
-
     "Forge World": {
         "T1": { prod: {alloys: 15}, upkeep: {minerals: 10} },
         "T2": { prod: {alloys: 25}, upkeep: {minerals: 15} },
@@ -136,7 +125,6 @@ const PLANET_DATA = {
         "T7_Ecumenopolis": { prod: {alloys: 105}, upkeep: {minerals: 55} },
         "T8": { prod: {alloys: 225}, upkeep: {minerals: 80} }
     },
-
     "Unification Center (Organic)": {
         "T1": { prod: {unity: 30}, upkeep: {food: 5} },
         "T2": { prod: {unity: 50}, upkeep: {food: 10} },
@@ -149,7 +137,6 @@ const PLANET_DATA = {
         "T7_Ecumenopolis": { prod: {unity: 350}, upkeep: {food: 55} },
         "T8": { prod: {unity: 850}, upkeep: {food: 300} }
     },
-
     "Unification Center (Machine)": {
         "T1": { prod: {unity: 30}, upkeep: {energy: 5} },
         "T2": { prod: {unity: 50}, upkeep: {energy: 10} },
@@ -162,7 +149,6 @@ const PLANET_DATA = {
         "T7_Ecumenopolis": { prod: {unity: 350}, upkeep: {energy: 55} },
         "T8": { prod: {unity: 850}, upkeep: {energy: 300} }
     },
-
     "Refinery World": {
         "T1": { prod: {volatile_motes: 5, exotic_gases: 5, rare_crystals: 5}, upkeep: {energy: 10, minerals: 10, food: 10} },
         "T2": { prod: {volatile_motes: 10, exotic_gases: 10, rare_crystals: 10}, upkeep: {energy: 18, minerals: 18, food: 18} },
@@ -175,7 +161,6 @@ const PLANET_DATA = {
         "T7_Ecumenopolis": { prod: {volatile_motes: 70, exotic_gases: 70, rare_crystals: 70}, upkeep: {energy: 100, minerals: 100, food: 100} },
         "T8_Ring": { prod: {volatile_motes: 50, exotic_gases: 50, rare_crystals: 50}, upkeep: {energy: 60, minerals: 60, food: 60} }
     },
-
     "Trade World (Organic)": {
         "T1": { prod: {trade: 30}, upkeep: {food: 5} },
         "T2": { prod: {trade: 50}, upkeep: {food: 10} },
@@ -188,7 +173,6 @@ const PLANET_DATA = {
         "T7_Ecumenopolis": { prod: {trade: 350}, upkeep: {food: 55} },
         "T8": { prod: {trade: 212.5}, upkeep: {food: 75} }
     },
-    
     "Trade World (Machine)": {
         "T1": { prod: {trade: 30}, upkeep: {energy: 5} },
         "T2": { prod: {trade: 50}, upkeep: {energy: 10} },
@@ -202,43 +186,72 @@ const PLANET_DATA = {
         "T8": { prod: {trade: 212.5}, upkeep: {energy: 75} }
     }
 };
-    }
-};
 
 let planets = [];
 
 // --- UI LOGIC ---
 function addPlanet() {
     const id = Date.now();
-    planets.push({ id, type: "JOAT", tier: "T4", hab: "80-100", asc: 0 });
+    // Dynamically grab the first designation and its first tier as defaults
+    const firstType = Object.keys(PLANET_DATA)[0];
+    const firstTier = Object.keys(PLANET_DATA[firstType])[0];
+    
+    planets.push({ id, type: firstType, tier: firstTier, hab: "80-100", asc: 0 });
     renderPlanets();
 }
 
 function updatePlanet(id, field, value) {
     const planet = planets.find(p => p.id === id);
-    if (planet) planet[field] = value;
+    if (planet) {
+        planet[field] = value;
+        // If designation changes, reset the tier to prevent looking up a non-existent tier
+        if (field === 'type') {
+            const validTiers = Object.keys(PLANET_DATA[value]);
+            if (!validTiers.includes(planet.tier)) {
+                planet.tier = validTiers[0]; 
+            }
+        }
+        renderPlanets();
+    }
+}
+
+function removePlanet(id) {
+    planets = planets.filter(p => p.id !== id);
+    renderPlanets();
 }
 
 function renderPlanets() {
     const container = document.getElementById('planet-container');
     container.innerHTML = '';
+    
     planets.forEach(p => {
         const div = document.createElement('div');
+        div.style.marginBottom = '10px';
+        
+        // 1. Build Type Dropdown dynamically from PLANET_DATA keys
+        let typeOptions = Object.keys(PLANET_DATA).map(type => 
+            `<option value="${type}" ${p.type === type ? "selected" : ""}>${type}</option>`
+        ).join('');
+        
+        // 2. Build Tier Dropdown dynamically based on the current selected Type
+        let tierOptions = Object.keys(PLANET_DATA[p.type]).map(tier => 
+            `<option value="${tier}" ${p.tier === tier ? "selected" : ""}>${tier}</option>`
+        ).join('');
+
         div.innerHTML = `
             <select onchange="updatePlanet(${p.id}, 'type', this.value)">
-                <option value="JOAT" ${p.type==="JOAT"?"selected":""}>JOAT</option>
-                <option value="Generator (Organic)" ${p.type==="Generator (Organic)"?"selected":""}>Generator (Org)</option>
+                ${typeOptions}
             </select>
             <select onchange="updatePlanet(${p.id}, 'tier', this.value)">
-                <option value="T1" ${p.tier==="T1"?"selected":""}>T1</option>
-                <option value="T4" ${p.tier==="T4"?"selected":""}>T4</option>
+                ${tierOptions}
             </select>
             <select onchange="updatePlanet(${p.id}, 'hab', this.value)">
                 <option value="80-100" ${p.hab==="80-100"?"selected":""}>80-100% Hab</option>
                 <option value="50-79" ${p.hab==="50-79"?"selected":""}>50-79% Hab</option>
                 <option value="0-49" ${p.hab==="0-49"?"selected":""}>0-49% Hab</option>
             </select>
-            Ascension: <input type="number" min="0" max="10" value="${p.asc}" onchange="updatePlanet(${p.id}, 'asc', parseFloat(this.value))" style="width: 50px;">
+            Ascension Level: <input type="number" min="0" max="10" value="${p.asc}" onchange="updatePlanet(${p.id}, 'asc', parseFloat(this.value))" style="width: 50px;">
+            <button onclick="removePlanet(${p.id})" style="background: #cc0000; padding: 5px 10px; margin-left: 10px;">Remove</button>
         `;
         container.appendChild(div);
     });
@@ -246,7 +259,6 @@ function renderPlanets() {
 
 // --- CALCULATION ENGINE ---
 function calculateEconomy() {
-    // 1. Gather Global Buffs from UI
     const buffs = {
         flatBasicPlanet: parseFloat(document.getElementById('buff-flat-basic-planet').value) || 0,
         flatEnergyTurn: parseFloat(document.getElementById('buff-flat-energy-turn').value) || 0,
@@ -256,12 +268,11 @@ function calculateEconomy() {
 
     let totalOutput = {};
 
-    // 2. Loop through all planets
     planets.forEach(p => {
-        const baseData = PLANET_DATA[p.type][p.tier];
-        if (!baseData) return; // Skip if data doesn't exist yet
+        // Safe lookup: skip if data somehow isn't found
+        const baseData = PLANET_DATA[p.type] && PLANET_DATA[p.type][p.tier];
+        if (!baseData) return;
 
-        // Determine Habitability Rules
         let habPenalty = 0;
         let perPlanetBuffsActive = true;
         if (p.hab === "0-49") { habPenalty = 0.70; perPlanetBuffsActive = false; }
@@ -273,12 +284,8 @@ function calculateEconomy() {
         if (baseData.prod) {
             for (const [res, amount] of Object.entries(baseData.prod)) {
                 let isBasic = RESOURCE_TYPES.basic.includes(res);
-                
-                // Base + Flat Buffs
                 let flatAdd = (isBasic && perPlanetBuffsActive) ? buffs.flatBasicPlanet : 0;
                 let currentBase = amount + flatAdd;
-
-                // Percentage Multipliers
                 let pctAdd = isBasic ? buffs.pctBasicPlanet : 0;
                 let multiplier = 1 - habPenalty + ascBonus + pctAdd;
 
@@ -286,7 +293,7 @@ function calculateEconomy() {
             }
         }
 
-        // Process Upkeep (Upkeep is generally not buffed by production multipliers, but is penalized by hab? Assuming it's static for now based on your prompt).
+        // Process Upkeep
         if (baseData.upkeep) {
             for (const [res, amount] of Object.entries(baseData.upkeep)) {
                 totalOutput[res] = (totalOutput[res] || 0) - amount;
@@ -294,23 +301,27 @@ function calculateEconomy() {
         }
     });
 
-    // 3. Apply Turn-Level Buffs
-    // Add Flat Energy
+    // Apply Turn-Level Buffs
     if (totalOutput['energy'] !== undefined) {
         totalOutput['energy'] += buffs.flatEnergyTurn;
     }
 
-    // Apply % Basic Resources per turn
     RESOURCE_TYPES.basic.forEach(res => {
         if (totalOutput[res] !== undefined) {
             totalOutput[res] = totalOutput[res] * (1 + buffs.pctBasicTurn);
         }
     });
 
-    // 4. Render to UI
+    // Render Output
     let outputString = "TOTAL TURN OUTPUT:\n--------------------\n";
-    for (const [res, amount] of Object.entries(totalOutput)) {
-        outputString += `${res.toUpperCase()}: ${amount.toFixed(2)}\n`;
-    }
+    // Sort keys alphabetically for cleaner reading
+    const sortedResources = Object.keys(totalOutput).sort();
+    
+    sortedResources.forEach(res => {
+        // Format names nicely (e.g., volatile_motes -> Volatile Motes)
+        let formattedName = res.replace('_', ' ').toUpperCase();
+        outputString += `${formattedName}: ${totalOutput[res].toFixed(2)}\n`;
+    });
+    
     document.getElementById('output-display').innerText = outputString;
 }
