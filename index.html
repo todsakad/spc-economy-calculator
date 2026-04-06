@@ -3,58 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Economy Calculator</title>
+    <title>Economy Calculator V3</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1e1e2e; color: #cdd6f4; padding: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1e1e2e; color: #cdd6f4; padding: 20px; max-width: 1200px; margin: auto; }
         .panel { background: #313244; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        h2 { margin-top: 0; color: #89b4fa; border-bottom: 1px solid #45475a; padding-bottom: 10px; }
-        button { background: #89b4fa; color: #11111b; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        h2 { margin-top: 0; color: #89b4fa; border-bottom: 1px solid #45475a; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        button { background: #89b4fa; color: #11111b; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
         button:hover { background: #b4befe; }
+        button.danger { background: #f38ba8; }
+        button.danger:hover { background: #eba0ac; }
+        button.success { background: #a6e3a1; color: #11111b; font-size: 1.1em; padding: 12px; width: 100%; }
+        button.success:hover { background: #94e2d5; }
+        
         select, input { background: #181825; color: #cdd6f4; border: 1px solid #45475a; padding: 6px; border-radius: 4px; margin-right: 10px; }
-        .buff-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
-        .buff-item { display: flex; flex-direction: column; }
-        .buff-item label { font-size: 0.9em; margin-bottom: 5px; color: #a6adc8; }
-        #output-display { font-family: monospace; white-space: pre-wrap; font-size: 1.1em; color: #a6e3a1; }
+        input[type="text"] { width: 150px; }
+        input[type="number"] { width: 70px; }
+
+        .mod-row { display: flex; align-items: center; background: #181825; padding: 8px; border-radius: 4px; margin-bottom: 8px; gap: 10px; }
+        
+        .planet-card { background: #45475a; padding: 15px; border-radius: 6px; margin-bottom: 15px; border-left: 5px solid #89b4fa; }
+        .planet-header { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+        .planet-mods { background: #313244; padding: 10px; border-radius: 4px; margin-top: 10px; }
+        
+        .header-actions { display: flex; gap: 10px; margin-bottom: 20px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #181825; border-radius: 6px; overflow: hidden; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #313244; }
+        th { background: #45475a; color: #cdd6f4; }
+        .positive { color: #a6e3a1; font-weight: bold; }
+        .negative { color: #f38ba8; font-weight: bold; }
+        .neutral { color: #cdd6f4; }
     </style>
 </head>
 <body>
 
-    <div class="panel">
-        <h2>Global Empire Modifiers</h2>
-        <div class="buff-grid">
-            <div class="buff-item">
-                <label>Flat Empire Energy (Base Turn Add):</label>
-                <input type="number" id="buff-flat-energy" value="0">
-            </div>
-            <div class="buff-item">
-                <label>Flat Empire Minerals (Base Turn Add):</label>
-                <input type="number" id="buff-flat-minerals" value="0">
-            </div>
-            <div class="buff-item">
-                <label>% Bonus to Basic (Energy/Min/Food):</label>
-                <input type="number" id="buff-pct-basic" value="0" placeholder="e.g. 10 for +10%">
-            </div>
-            <div class="buff-item">
-                <label>% Bonus to Advanced (Alloys/Tech/Unity):</label>
-                <input type="number" id="buff-pct-adv" value="0" placeholder="e.g. 15 for +15%">
-            </div>
-            <div class="buff-item">
-                <label>% Bonus to Trade Value:</label>
-                <input type="number" id="buff-pct-trade" value="0" placeholder="e.g. 5 for +5%">
-            </div>
-        </div>
+    <div class="header-actions">
+        <button onclick="saveData()">💾 Save Configuration</button>
+        <button onclick="document.getElementById('file-upload').click()">📂 Load Configuration</button>
+        <input type="file" id="file-upload" style="display:none" accept=".json" onchange="loadData(event)">
     </div>
 
     <div class="panel">
-        <h2>Planets</h2>
-        <button onclick="addPlanet()" style="margin-bottom: 15px;">+ Add Planet</button>
+        <h2>Global Modifiers <button onclick="addGlobalModifier()">+ Add Global Mod</button></h2>
+        <div id="global-mods-container"></div>
+    </div>
+
+    <div class="panel">
+        <h2>Empire Planets <button onclick="addPlanet()">+ Add Planet</button></h2>
         <div id="planet-container"></div>
     </div>
 
-    <div class="panel">
-        <button onclick="calculateEconomy()" style="background: #a6e3a1; width: 100%; font-size: 1.2em; padding: 15px;">Calculate Total Turn Output</button>
-        <h2 style="margin-top: 20px;">Results:</h2>
-        <div id="output-display">Add a planet and hit calculate!</div>
+    <div class="panel" style="background: #1e1e2e; border: 2px solid #89b4fa;">
+        <button class="success" onclick="calculateEconomy()">Calculate Total Economy</button>
+        <h2 style="margin-top: 20px; border-bottom: none;">Ledger Results:</h2>
+        <div id="output-display">Add planets and modifiers, then hit calculate!</div>
     </div>
 
 <script>
@@ -64,6 +66,16 @@
         trade: ['trade']
     };
 
+    const MODIFIER_TYPES = {
+        'pct_basic': '% Basic Output (Energy/Min/Food)',
+        'pct_adv': '% Adv Output (Alloys/Tech/Unity)',
+        'pct_trade': '% Trade Value',
+        'pct_all': '% All Output',
+        'flat_energy': 'Flat Energy Add',
+        'flat_minerals': 'Flat Minerals Add'
+    };
+
+    // Keep your massive dictionary here
     const PLANET_DATA = {
         "JOAT": {
             "T0": { prod: {}, upkeep: {} },
@@ -166,160 +178,273 @@
         }
     };
 
-    let planets = [];
+    let appState = {
+        globalModifiers: [],
+        planets: []
+    };
 
-    // --- UI LOGIC ---
+    // --- STATE MANAGEMENT ---
+    function saveData() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "empire_economy.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    }
+
+    function loadData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                appState = JSON.parse(e.target.result);
+                renderApp();
+            } catch (err) {
+                alert("Error loading file. Make sure it's a valid JSON configuration.");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // --- MODIFIER LOGIC ---
+    function addGlobalModifier() {
+        appState.globalModifiers.push({ id: Date.now(), name: "New Buff", type: "pct_basic", value: 0 });
+        renderApp();
+    }
+
+    function updateGlobalModifier(id, field, value) {
+        const mod = appState.globalModifiers.find(m => m.id === id);
+        if (mod) mod[field] = value;
+        renderApp();
+    }
+
+    function removeGlobalModifier(id) {
+        appState.globalModifiers = appState.globalModifiers.filter(m => m.id !== id);
+        renderApp();
+    }
+
+    function addLocalModifier(planetId) {
+        const p = appState.planets.find(p => p.id === planetId);
+        if (p) {
+            p.modifiers.push({ id: Date.now(), name: "Local Buff", type: "pct_basic", value: 0 });
+            renderApp();
+        }
+    }
+
+    function updateLocalModifier(planetId, modId, field, value) {
+        const p = appState.planets.find(p => p.id === planetId);
+        if (p) {
+            const mod = p.modifiers.find(m => m.id === modId);
+            if (mod) mod[field] = value;
+            renderApp();
+        }
+    }
+
+    function removeLocalModifier(planetId, modId) {
+        const p = appState.planets.find(p => p.id === planetId);
+        if (p) {
+            p.modifiers = p.modifiers.filter(m => m.id !== modId);
+            renderApp();
+        }
+    }
+
+    // --- PLANET LOGIC ---
     function addPlanet() {
         const id = Date.now();
         const firstType = Object.keys(PLANET_DATA)[0];
         const firstTier = Object.keys(PLANET_DATA[firstType])[0];
         
-        planets.push({ id, type: firstType, tier: firstTier, hab: "80-100", asc: 0 });
-        renderPlanets();
+        appState.planets.push({ id, name: "New Planet", type: firstType, tier: firstTier, hab: "80-100", asc: 0, modifiers: [] });
+        renderApp();
     }
 
     function updatePlanet(id, field, value) {
-        const planet = planets.find(p => p.id === id);
+        const planet = appState.planets.find(p => p.id === id);
         if (planet) {
             planet[field] = value;
             if (field === 'type') {
                 const validTiers = Object.keys(PLANET_DATA[value]);
-                if (!validTiers.includes(planet.tier)) {
-                    planet.tier = validTiers[0]; 
-                }
+                if (!validTiers.includes(planet.tier)) planet.tier = validTiers[0]; 
             }
-            renderPlanets();
+            renderApp();
         }
     }
 
     function removePlanet(id) {
-        planets = planets.filter(p => p.id !== id);
-        renderPlanets();
+        appState.planets = appState.planets.filter(p => p.id !== id);
+        renderApp();
     }
 
-    function renderPlanets() {
-        const container = document.getElementById('planet-container');
-        container.innerHTML = '';
-        
-        planets.forEach(p => {
-            const div = document.createElement('div');
-            div.style.marginBottom = '15px';
-            div.style.padding = '10px';
-            div.style.background = '#181825';
-            div.style.borderRadius = '5px';
-            div.style.display = 'flex';
-            div.style.alignItems = 'center';
-            div.style.flexWrap = 'wrap';
-            div.style.gap = '10px';
-            
-            let typeOptions = Object.keys(PLANET_DATA).map(type => 
-                `<option value="${type}" ${p.type === type ? "selected" : ""}>${type}</option>`
-            ).join('');
-            
-            let tierOptions = Object.keys(PLANET_DATA[p.type]).map(tier => 
-                `<option value="${tier}" ${p.tier === tier ? "selected" : ""}>${tier}</option>`
-            ).join('');
+    // --- RENDERING UI ---
+    function buildModifierSelect(currentValue) {
+        return Object.entries(MODIFIER_TYPES).map(([val, label]) => 
+            `<option value="${val}" ${currentValue === val ? 'selected' : ''}>${label}</option>`
+        ).join('');
+    }
 
-            div.innerHTML = `
-                <select onchange="updatePlanet(${p.id}, 'type', this.value)">
-                    ${typeOptions}
-                </select>
-                <select onchange="updatePlanet(${p.id}, 'tier', this.value)">
-                    ${tierOptions}
-                </select>
-                <select onchange="updatePlanet(${p.id}, 'hab', this.value)">
-                    <option value="80-100" ${p.hab==="80-100"?"selected":""}>80-100% Hab</option>
-                    <option value="50-79" ${p.hab==="50-79"?"selected":""}>50-79% Hab</option>
-                    <option value="0-49" ${p.hab==="0-49"?"selected":""}>0-49% Hab</option>
-                </select>
-                <label style="font-size: 0.9em; margin-left: auto;">Ascension:</label>
-                <input type="number" min="0" max="10" value="${p.asc}" onchange="updatePlanet(${p.id}, 'asc', parseFloat(this.value) || 0)" style="width: 50px; margin-right: 0;">
-                <button onclick="removePlanet(${p.id})" style="background: #f38ba8; color: #11111b; margin-left: 10px;">X</button>
+    function renderApp() {
+        // 1. Render Global Mods
+        const gContainer = document.getElementById('global-mods-container');
+        gContainer.innerHTML = appState.globalModifiers.length === 0 ? '<span style="color:#a6adc8;">No global modifiers active.</span>' : '';
+        appState.globalModifiers.forEach(m => {
+            gContainer.innerHTML += `
+                <div class="mod-row">
+                    <input type="text" value="${m.name}" onchange="updateGlobalModifier(${m.id}, 'name', this.value)">
+                    <select onchange="updateGlobalModifier(${m.id}, 'type', this.value)">${buildModifierSelect(m.type)}</select>
+                    Value: <input type="number" value="${m.value}" onchange="updateGlobalModifier(${m.id}, 'value', parseFloat(this.value) || 0)">
+                    <button class="danger" onclick="removeGlobalModifier(${m.id})">X</button>
+                </div>
             `;
-            container.appendChild(div);
+        });
+
+        // 2. Render Planets
+        const pContainer = document.getElementById('planet-container');
+        pContainer.innerHTML = appState.planets.length === 0 ? '<span style="color:#a6adc8;">No planets colonized yet.</span>' : '';
+        
+        appState.planets.forEach(p => {
+            let typeOptions = Object.keys(PLANET_DATA).map(type => `<option value="${type}" ${p.type === type ? "selected" : ""}>${type}</option>`).join('');
+            let tierOptions = Object.keys(PLANET_DATA[p.type]).map(tier => `<option value="${tier}" ${p.tier === tier ? "selected" : ""}>${tier}</option>`).join('');
+
+            let localModsHtml = p.modifiers.map(m => `
+                <div class="mod-row">
+                    <input type="text" value="${m.name}" onchange="updateLocalModifier(${p.id}, ${m.id}, 'name', this.value)" style="width:120px;">
+                    <select onchange="updateLocalModifier(${p.id}, ${m.id}, 'type', this.value)">${buildModifierSelect(m.type)}</select>
+                    Value: <input type="number" value="${m.value}" onchange="updateLocalModifier(${p.id}, ${m.id}, 'value', parseFloat(this.value) || 0)">
+                    <button class="danger" onclick="removeLocalModifier(${p.id}, ${m.id})">X</button>
+                </div>
+            `).join('');
+
+            pContainer.innerHTML += `
+                <div class="planet-card">
+                    <div class="planet-header">
+                        <input type="text" value="${p.name}" onchange="updatePlanet(${p.id}, 'name', this.value)" placeholder="Planet Name" style="font-weight: bold; background: #313244;">
+                        <select onchange="updatePlanet(${p.id}, 'type', this.value)">${typeOptions}</select>
+                        <select onchange="updatePlanet(${p.id}, 'tier', this.value)">${tierOptions}</select>
+                        <select onchange="updatePlanet(${p.id}, 'hab', this.value)">
+                            <option value="80-100" ${p.hab==="80-100"?"selected":""}>80-100% Hab</option>
+                            <option value="50-79" ${p.hab==="50-79"?"selected":""}>50-79% Hab</option>
+                            <option value="0-49" ${p.hab==="0-49"?"selected":""}>0-49% Hab</option>
+                        </select>
+                        <label style="font-size: 0.9em;">Ascension:</label>
+                        <input type="number" min="0" max="10" value="${p.asc}" onchange="updatePlanet(${p.id}, 'asc', parseFloat(this.value) || 0)" style="width: 50px;">
+                        <button class="danger" onclick="removePlanet(${p.id})" style="margin-left: auto;">Remove</button>
+                    </div>
+                    <div class="planet-mods">
+                        <div style="margin-bottom: 10px; font-size: 0.9em; color: #a6adc8; display: flex; justify-content: space-between; align-items: center;">
+                            Local Modifiers <button onclick="addLocalModifier(${p.id})" style="padding: 4px 8px; font-size: 0.8em;">+ Add Buff</button>
+                        </div>
+                        ${localModsHtml || '<span style="font-size: 0.8em; color: #6c7086;">No local buffs.</span>'}
+                    </div>
+                </div>
+            `;
         });
     }
 
     // --- CALCULATION ENGINE ---
     function calculateEconomy() {
-        const buffs = {
-            flatEnergy: parseFloat(document.getElementById('buff-flat-energy').value) || 0,
-            flatMinerals: parseFloat(document.getElementById('buff-flat-minerals').value) || 0,
-            pctBasic: (parseFloat(document.getElementById('buff-pct-basic').value) || 0) / 100,
-            pctAdv: (parseFloat(document.getElementById('buff-pct-adv').value) || 0) / 100,
-            pctTrade: (parseFloat(document.getElementById('buff-pct-trade').value) || 0) / 100
-        };
+        let gross = {};
+        let upkeep = {};
 
-        let totalOutput = {};
+        // Aggregate Global Buffs
+        let gBuffs = { pct_basic: 0, pct_adv: 0, pct_trade: 0, pct_all: 0, flat_energy: 0, flat_minerals: 0 };
+        appState.globalModifiers.forEach(m => { gBuffs[m.type] += m.value; });
 
-        // Calculate Planet Production & Upkeep
-        planets.forEach(p => {
+        // Calculate Planets
+        appState.planets.forEach(p => {
             const baseData = PLANET_DATA[p.type] && PLANET_DATA[p.type][p.tier];
             if (!baseData) return;
 
+            // Aggregate Local Buffs for this planet
+            let lBuffs = { pct_basic: 0, pct_adv: 0, pct_trade: 0, pct_all: 0, flat_energy: 0, flat_minerals: 0 };
+            p.modifiers.forEach(m => { lBuffs[m.type] += m.value; });
+
             let habPenalty = 0;
-            if (p.hab === "0-49") { habPenalty = 0.70; }
-            if (p.hab === "50-79") { habPenalty = 0.30; }
-            
+            if (p.hab === "0-49") habPenalty = 0.70;
+            if (p.hab === "50-79") habPenalty = 0.30;
             const ascBonus = p.asc * 0.05;
 
-            // Process Production
+            // Apply Base Production + Modifiers
             if (baseData.prod) {
                 for (const [res, amount] of Object.entries(baseData.prod)) {
                     let isBasic = RESOURCE_TYPES.basic.includes(res);
                     let isAdv = RESOURCE_TYPES.advanced.includes(res);
                     let isTrade = RESOURCE_TYPES.trade.includes(res);
 
-                    let pctBonus = 0;
-                    if (isBasic) pctBonus = buffs.pctBasic;
-                    if (isAdv) pctBonus = buffs.pctAdv;
-                    if (isTrade) pctBonus = buffs.pctTrade;
+                    let pctBonus = gBuffs.pct_all + lBuffs.pct_all;
+                    if (isBasic) pctBonus += (gBuffs.pct_basic + lBuffs.pct_basic);
+                    if (isAdv) pctBonus += (gBuffs.pct_adv + lBuffs.pct_adv);
+                    if (isTrade) pctBonus += (gBuffs.pct_trade + lBuffs.pct_trade);
 
-                    // Multiplier = Base (1.0) - Habitability Penalty + Ascension Bonus + Buffs
-                    // Note: Habitability penalty doesn't usually apply to Trade in normal Stellaris rules, 
-                    // but I'm keeping the math uniform here unless you want it excluded.
-                    let multiplier = 1 - habPenalty + ascBonus + pctBonus;
-                    if (multiplier < 0) multiplier = 0; // Prevent negative production loops
+                    let multiplier = 1 - habPenalty + ascBonus + (pctBonus / 100);
+                    if (multiplier < 0) multiplier = 0;
 
-                    totalOutput[res] = (totalOutput[res] || 0) + (amount * multiplier);
+                    gross[res] = (gross[res] || 0) + (amount * multiplier);
                 }
             }
 
-            // Process Upkeep (Usually unaffected by production buffs)
+            // Apply Upkeep (Untouched by standard production modifiers)
             if (baseData.upkeep) {
                 for (const [res, amount] of Object.entries(baseData.upkeep)) {
-                    totalOutput[res] = (totalOutput[res] || 0) - amount;
+                    upkeep[res] = (upkeep[res] || 0) + amount;
                 }
             }
+
+            // Apply Local Flat Buffs
+            if (lBuffs.flat_energy > 0) gross['energy'] = (gross['energy'] || 0) + lBuffs.flat_energy;
+            if (lBuffs.flat_minerals > 0) gross['minerals'] = (gross['minerals'] || 0) + lBuffs.flat_minerals;
         });
 
-        // Apply Empire Flat Buffs (e.g. Dyson spheres, base stations)
-        if (totalOutput['energy'] !== undefined || buffs.flatEnergy > 0) {
-            totalOutput['energy'] = (totalOutput['energy'] || 0) + buffs.flatEnergy;
-        }
-        if (totalOutput['minerals'] !== undefined || buffs.flatMinerals > 0) {
-            totalOutput['minerals'] = (totalOutput['minerals'] || 0) + buffs.flatMinerals;
+        // Apply Global Flat Buffs
+        if (gBuffs.flat_energy > 0) gross['energy'] = (gross['energy'] || 0) + gBuffs.flat_energy;
+        if (gBuffs.flat_minerals > 0) gross['minerals'] = (gross['minerals'] || 0) + gBuffs.flat_minerals;
+
+        // Render Ledger Table
+        const allResources = new Set([...Object.keys(gross), ...Object.keys(upkeep)]);
+        let sortedResources = Array.from(allResources).sort();
+
+        if (sortedResources.length === 0) {
+            document.getElementById('output-display').innerHTML = "No active production or upkeep.";
+            return;
         }
 
-        // Render Output
-        let outputString = "";
-        const sortedResources = Object.keys(totalOutput).sort();
-        
-        if (sortedResources.length === 0) {
-            outputString = "No planets added yet.";
-        } else {
-            sortedResources.forEach(res => {
-                let formattedName = res.replace('_', ' ').toUpperCase();
-                let val = totalOutput[res];
-                // Color formatting for positives and negatives
-                let color = val >= 0 ? '#a6e3a1' : '#f38ba8'; 
-                let sign = val >= 0 ? '+' : '';
-                outputString += `<span style="color: ${color}">${formattedName}: ${sign}${val.toFixed(2)}</span>\n`;
-            });
-        }
-        
-        document.getElementById('output-display').innerHTML = outputString;
+        let tableHtml = `
+            <table>
+                <tr>
+                    <th>Resource</th>
+                    <th>Gross Production</th>
+                    <th>Total Upkeep</th>
+                    <th>Net Balance</th>
+                </tr>
+        `;
+
+        sortedResources.forEach(res => {
+            let pVal = gross[res] || 0;
+            let uVal = upkeep[res] || 0;
+            let netVal = pVal - uVal;
+
+            let formattedName = res.replace('_', ' ').toUpperCase();
+            let netClass = netVal > 0 ? 'positive' : (netVal < 0 ? 'negative' : 'neutral');
+            let netSign = netVal > 0 ? '+' : '';
+
+            tableHtml += `
+                <tr>
+                    <td style="font-weight: bold;">${formattedName}</td>
+                    <td class="positive">${pVal > 0 ? '+' + pVal.toFixed(1) : '-'}</td>
+                    <td class="negative">${uVal > 0 ? '-' + uVal.toFixed(1) : '-'}</td>
+                    <td class="${netClass}">${netSign}${netVal.toFixed(1)}</td>
+                </tr>
+            `;
+        });
+
+        tableHtml += `</table>`;
+        document.getElementById('output-display').innerHTML = tableHtml;
     }
+
+    // Initialize the app empty
+    renderApp();
 </script>
 </body>
 </html>
