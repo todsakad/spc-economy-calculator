@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Economy Calculator V5.1 - Streamlined Tech Integration</title>
+    <title>Economy Calculator V5.2 - Upkeep Modifiers</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1e1e2e; color: #cdd6f4; padding: 20px; max-width: 1400px; margin: auto; }
         .panel { background: #313244; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
@@ -75,7 +75,7 @@
     <div id="tab-economy" class="tab-content active">
         <div class="panel">
             <h2>Custom Global Modifiers <button onclick="addGlobalModifier()">+ Add Custom Mod</button></h2>
-            <div style="font-size: 0.85em; color: #a6adc8; margin-bottom: 10px;">Note: Tech Tree economy buffs are applied automatically and do not need to be added here.</div>
+            <div style="font-size: 0.85em; color: #a6adc8; margin-bottom: 10px;">Note: Tech Tree economy buffs are applied automatically. Use negative values for Upkeep reduction (e.g., -10%).</div>
             <div id="global-mods-container"></div>
         </div>
 
@@ -220,13 +220,18 @@
         { id: "tech_quantum_theory", name: "Quantum Theory", category: "Physics", tier: 1, desc: "+15 Tech per turn" },
         { id: "tech_app_quantum", name: "Applied Quantum Physics", category: "Physics", tier: 2, desc: "+50 Tech per turn" },
         { id: "tech_spacetime", name: "Space-Time Theory", category: "Physics", tier: 4, desc: "+100 Tech per turn" },
+        { id: "tech_grav_analysis_1", name: "Gravitational Analysis I (R)", category: "Physics", tier: 5, desc: "+20 Energy per planet" },
+        { id: "tech_hydroponics", name: "Eco-Simulation", category: "Society", tier: 1, desc: "-10% Food Upkeep" }
     ];
 
+    // Math mapped strictly to your parsing engine
     const TECH_EFFECTS = {
         "tech_admin_ai": [{ type: "Flat tech", value: 15, scope: "turn", target: "all" }],
         "tech_quantum_theory": [{ type: "Flat tech", value: 15, scope: "turn", target: "all" }],
         "tech_app_quantum": [{ type: "Flat tech", value: 50, scope: "turn", target: "all" }],
         "tech_spacetime": [{ type: "Flat tech", value: 100, scope: "turn", target: "all" }],
+        "tech_grav_analysis_1": [{ type: "Flat energy", value: 20, scope: "planet", target: "all" }],
+        "tech_hydroponics": [{ type: "% Food Upkeep", value: -10, scope: "turn", target: "all" }]
     };
 
     // --- 2. STATE MANAGEMENT ---
@@ -246,10 +251,16 @@
     function initDatalist() {
         const datalist = document.getElementById('modifier-options');
         let options = [];
-        ['All', 'Basic', 'Abstract', 'Special', 'Strategic'].forEach(cat => { options.push(`% ${cat}`); options.push(`Flat ${cat}`); });
+        // Add production and upkeep options for categories
+        ['All', 'Basic', 'Abstract', 'Special', 'Strategic'].forEach(cat => { 
+            options.push(`% ${cat}`); options.push(`Flat ${cat}`); 
+            options.push(`% ${cat} Upkeep`); options.push(`Flat ${cat} Upkeep`);
+        });
+        // Add production and upkeep options for specific resources
         ALL_RESOURCES.forEach(res => {
             let prettyName = res.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
             options.push(`% ${prettyName}`); options.push(`Flat ${prettyName}`);
+            options.push(`% ${prettyName} Upkeep`); options.push(`Flat ${prettyName} Upkeep`);
         });
         datalist.innerHTML = options.map(opt => `<option value="${opt}"></option>`).join('');
     }
@@ -300,7 +311,6 @@
     }
 
     function renderApp() {
-        // Render Global Mods
         const gContainer = document.getElementById('global-mods-container');
         gContainer.innerHTML = appState.globalModifiers.length === 0 ? '<span style="color:#a6adc8;">No custom global modifiers.</span>' : '';
         appState.globalModifiers.forEach(m => {
@@ -319,7 +329,6 @@
             `;
         });
 
-        // Render Planets
         const pContainer = document.getElementById('planet-container');
         pContainer.innerHTML = appState.planets.length === 0 ? '<span style="color:#a6adc8;">No planets colonized yet.</span>' : '';
         appState.planets.forEach(p => {
@@ -350,18 +359,15 @@
             `;
         });
 
-        // Render Tech Tree
         const tContainer = document.getElementById('tech-tree-container');
         tContainer.innerHTML = '';
         
-        // Grab search query
         const searchInput = document.getElementById('tech-search');
         const searchQuery = searchInput ? searchInput.value.toLowerCase() : "";
 
         const categories = ["Physics", "Society", "Engineering"];
         
         categories.forEach(cat => {
-            // Filter by category AND search query
             let catTechs = TECH_DATA.filter(t => {
                 let matchesCat = t.category === cat;
                 let matchesSearch = t.name.toLowerCase().includes(searchQuery) || t.desc.toLowerCase().includes(searchQuery);
@@ -376,9 +382,7 @@
             for(let i = 1; i <= maxTier; i++) {
                 let tierTechs = catTechs.filter(t => t.tier === i);
                 if (tierTechs.length > 0) {
-                    catHtml += `<div class="tech-tier-row">
-                        <div class="tier-label">Tier ${i}</div>`;
-                    
+                    catHtml += `<div class="tech-tier-row"><div class="tier-label">Tier ${i}</div>`;
                     tierTechs.forEach(t => {
                         let isResearched = appState.researchedTechs.includes(t.id);
                         catHtml += `
@@ -405,22 +409,25 @@
         let str = typeString.toLowerCase().trim();
         let isPct = str.startsWith('%'); let isFlat = str.startsWith('flat');
         if (!isPct && !isFlat) return []; 
-        let resTarget = str.substring(isFlat ? 5 : 2).trim().replace(/ /g, '_');
+        
+        // Check if it's an upkeep modifier and strip the word for parsing
+        let isUpkeep = str.includes('upkeep');
+        let resTargetStr = str.substring(isFlat ? 5 : 2).replace('upkeep', '').trim();
+        let resTarget = resTargetStr.replace(/ /g, '_');
+        
         let targets = resTarget === 'all' ? ALL_RESOURCES : (RESOURCE_TYPES[resTarget] || [resTarget]);
-        return targets.map(t => ({ res: t, isPct, value }));
+        return targets.map(t => ({ res: t, isPct, value, isUpkeep }));
     }
 
     function calculateEconomy() {
         let gross = {}; let upkeep = {};
         let turnMods = []; let planetMods = [];
 
-        // Load Custom Global Mods
         appState.globalModifiers.forEach(m => {
             if (m.scope === 'turn') turnMods.push(m);
             if (m.scope === 'planet') planetMods.push(m);
         });
 
-        // Load Automated Tech Mods
         appState.researchedTechs.forEach(techId => {
             if (TECH_EFFECTS[techId]) {
                 TECH_EFFECTS[techId].forEach(effect => {
@@ -430,16 +437,21 @@
             }
         });
 
-        // Calculate Planets
         appState.planets.forEach(p => {
             const baseData = PLANET_DATA[p.type] && PLANET_DATA[p.type][p.tier];
             if (!baseData) return;
 
-            let activeBuffs = { pct: {}, flat: {} };
+            // Separate trackers for Production and Upkeep modifiers
+            let activeBuffs = { prodPct: {}, prodFlat: {}, upkPct: {}, upkFlat: {} };
             function applyToAccumulator(modObj) {
                 parseModifier(modObj.type, modObj.value).forEach(mod => {
-                    if (mod.isPct) activeBuffs.pct[mod.res] = (activeBuffs.pct[mod.res] || 0) + mod.value;
-                    else activeBuffs.flat[mod.res] = (activeBuffs.flat[mod.res] || 0) + mod.value;
+                    if (mod.isUpkeep) {
+                        if (mod.isPct) activeBuffs.upkPct[mod.res] = (activeBuffs.upkPct[mod.res] || 0) + mod.value;
+                        else activeBuffs.upkFlat[mod.res] = (activeBuffs.upkFlat[mod.res] || 0) + mod.value;
+                    } else {
+                        if (mod.isPct) activeBuffs.prodPct[mod.res] = (activeBuffs.prodPct[mod.res] || 0) + mod.value;
+                        else activeBuffs.prodFlat[mod.res] = (activeBuffs.prodFlat[mod.res] || 0) + mod.value;
+                    }
                 });
             }
 
@@ -458,23 +470,36 @@
             let habPenalty = p.hab === "0-49" ? 0.70 : (p.hab === "50-79" ? 0.30 : 0);
             const ascBonus = p.asc * 0.05;
 
+            // Apply Production Mods
             if (baseData.prod) {
                 for (const [res, amount] of Object.entries(baseData.prod)) {
-                    let basePlusFlat = amount + (activeBuffs.flat[res] || 0);
-                    let pctMultiplier = Math.max(0, 1 - habPenalty + ascBonus + ((activeBuffs.pct[res] || 0) / 100));
+                    let basePlusFlat = amount + (activeBuffs.prodFlat[res] || 0);
+                    let pctMultiplier = Math.max(0, 1 - habPenalty + ascBonus + ((activeBuffs.prodPct[res] || 0) / 100));
                     gross[res] = (gross[res] || 0) + (basePlusFlat * pctMultiplier);
                 }
             }
+            
+            // Apply Upkeep Mods
             if (baseData.upkeep) {
-                for (const [res, amount] of Object.entries(baseData.upkeep)) upkeep[res] = (upkeep[res] || 0) + amount;
+                for (const [res, amount] of Object.entries(baseData.upkeep)) {
+                    let basePlusFlat = amount + (activeBuffs.upkFlat[res] || 0);
+                    // Negative percent means a reduction. E.g., -10 value = 0.9x multiplier
+                    let pctMultiplier = Math.max(0, 1 + ((activeBuffs.upkPct[res] || 0) / 100));
+                    upkeep[res] = (upkeep[res] || 0) + (basePlusFlat * pctMultiplier);
+                }
             }
         });
 
-        // Apply Empire Turn Mods
+        // Apply Empire Turn Mods (Production and Upkeep)
         turnMods.forEach(m => {
             parseModifier(m.type, m.value).forEach(mod => {
-                if (mod.isPct) gross[mod.res] = (gross[mod.res] || 0) * (1 + (mod.value / 100));
-                else gross[mod.res] = (gross[mod.res] || 0) + mod.value;
+                if (mod.isUpkeep) {
+                    if (mod.isPct) upkeep[mod.res] = (upkeep[mod.res] || 0) * (1 + (mod.value / 100));
+                    else upkeep[mod.res] = (upkeep[mod.res] || 0) + mod.value; // E.g., -1 flat food upkeep
+                } else {
+                    if (mod.isPct) gross[mod.res] = (gross[mod.res] || 0) * (1 + (mod.value / 100));
+                    else gross[mod.res] = (gross[mod.res] || 0) + mod.value;
+                }
             });
         });
 
