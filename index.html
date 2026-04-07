@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Economy Calculator V5 - Tech Integration</title>
+    <title>Economy Calculator V5.1 - Streamlined Tech Integration</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1e1e2e; color: #cdd6f4; padding: 20px; max-width: 1400px; margin: auto; }
         .panel { background: #313244; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
@@ -29,6 +29,8 @@
         .tab-content.active { display: block; }
 
         /* Tech Tree Visuals */
+        .tech-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .tech-search-bar { width: 300px !important; padding: 8px !important; border-radius: 20px !important; border: 1px solid #89b4fa !important; }
         .tech-category { margin-bottom: 40px; }
         .tech-category-title { color: #f5c2e7; border-bottom: 2px solid #f5c2e7; padding-bottom: 5px; margin-bottom: 15px; }
         .tech-tier-row { display: flex; gap: 20px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 10px; align-items: flex-start;}
@@ -92,7 +94,10 @@
     <div id="tab-tech" class="tab-content">
         <div class="panel">
             <h2 style="border: none;">Research Divisions</h2>
-            <div style="font-size: 0.9em; color: #a6adc8; margin-bottom: 20px;">Click a technology to research it. Economy buffs will automatically apply to the ledger.</div>
+            <div class="tech-header">
+                <div style="font-size: 0.9em; color: #a6adc8;">Click a technology to research it. Economy buffs will automatically apply to the ledger.</div>
+                <input type="text" id="tech-search" class="tech-search-bar" placeholder="🔍 Search technologies by name or effect..." oninput="renderApp()">
+            </div>
             <div id="tech-tree-container"></div>
         </div>
     </div>
@@ -209,35 +214,19 @@
         }
     };
 
-    // --- FULL TECH TREE DATA ---
+    // --- FILTERED TECH TREE DATA (Economy Only) ---
     const TECH_DATA = [
-        // Physics Techs
         { id: "tech_admin_ai", name: "Administrative AI", category: "Physics", tier: 1, desc: "+15 Tech per turn" },
         { id: "tech_quantum_theory", name: "Quantum Theory", category: "Physics", tier: 1, desc: "+15 Tech per turn" },
-        { id: "tech_auto_explore", name: "Automated Exploration", category: "Physics", tier: 1, desc: "-0.5 MP for science ships" },
         { id: "tech_app_quantum", name: "Applied Quantum Physics", category: "Physics", tier: 2, desc: "+50 Tech per turn" },
-        { id: "tech_wormhole", name: "Wormhole Stabilization", category: "Physics", tier: 3, desc: "Access to wormholes" },
-        { id: "tech_colony_ai", name: "AI Colony Ships", category: "Physics", tier: 3, desc: "-0.5 AP from colonizing" },
         { id: "tech_spacetime", name: "Space-Time Theory", category: "Physics", tier: 4, desc: "+100 Tech per turn" },
-        { id: "tech_lightbringer", name: "Lightbringer Nullifier", category: "Physics", tier: 4, desc: "Nullifies Lightbringer Effect" },
-        { id: "tech_jump", name: "Jump Drive", category: "Physics", tier: 5, desc: "Can jump anywhere (Needs 2 AP)" },
-        { id: "tech_dark_matter", name: "Dark Matter Power", category: "Physics", tier: 5, desc: "+100% FP to everything" },
-        { id: "tech_gateway_act", name: "Gateway Activation", category: "Physics", tier: 5, desc: "Allows Gateway activation" },
-        { id: "tech_gateway_con", name: "Gateway Construction", category: "Physics", tier: 5, desc: "Unlocks Gateways" },
-        { id: "tech_grav_analysis_1", name: "Gravitational Analysis I (R)", category: "Physics", tier: 5, desc: "+20 Energy per planet" },
-        { id: "tech_focus_arrays_1", name: "Focusing Arrays I (R)", category: "Physics", tier: 5, desc: "+5% FP" },
-        { id: "tech_flash_coolant_1", name: "Flash Coolant I (R)", category: "Physics", tier: 5, desc: "+5% FP" }
-        
-        // Note: Add your Society and Engineering techs here following the same format!
     ];
 
-    // Math mapped strictly to your parsing engine
     const TECH_EFFECTS = {
         "tech_admin_ai": [{ type: "Flat tech", value: 15, scope: "turn", target: "all" }],
         "tech_quantum_theory": [{ type: "Flat tech", value: 15, scope: "turn", target: "all" }],
         "tech_app_quantum": [{ type: "Flat tech", value: 50, scope: "turn", target: "all" }],
         "tech_spacetime": [{ type: "Flat tech", value: 100, scope: "turn", target: "all" }],
-        "tech_grav_analysis_1": [{ type: "Flat energy", value: 20, scope: "planet", target: "all" }]
     };
 
     // --- 2. STATE MANAGEMENT ---
@@ -364,10 +353,21 @@
         // Render Tech Tree
         const tContainer = document.getElementById('tech-tree-container');
         tContainer.innerHTML = '';
+        
+        // Grab search query
+        const searchInput = document.getElementById('tech-search');
+        const searchQuery = searchInput ? searchInput.value.toLowerCase() : "";
+
         const categories = ["Physics", "Society", "Engineering"];
         
         categories.forEach(cat => {
-            let catTechs = TECH_DATA.filter(t => t.category === cat);
+            // Filter by category AND search query
+            let catTechs = TECH_DATA.filter(t => {
+                let matchesCat = t.category === cat;
+                let matchesSearch = t.name.toLowerCase().includes(searchQuery) || t.desc.toLowerCase().includes(searchQuery);
+                return matchesCat && matchesSearch;
+            });
+
             if (catTechs.length === 0) return;
 
             let catHtml = `<div class="tech-category"><h3 class="tech-category-title">${cat}</h3>`;
@@ -394,6 +394,10 @@
             catHtml += `</div>`;
             tContainer.innerHTML += catHtml;
         });
+        
+        if (tContainer.innerHTML === '' && searchQuery !== '') {
+             tContainer.innerHTML = `<span style="color:#a6adc8;">No technologies found matching "${searchQuery}".</span>`;
+        }
     }
 
     // --- 4. ENGINE MATH ---
